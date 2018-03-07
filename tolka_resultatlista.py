@@ -39,10 +39,6 @@ lines = iter(lines)
 
 for line in lines:
     words = line.split(",")
-    if words[0] == "JUDGES DETAILS":
-        skaters.append(skater)
-        skater = {}
-        continue
     if "COMPETITION" in words[0]:
         skater["competition"] = words[0].split(":")[-1].lower().strip()
         continue
@@ -74,14 +70,45 @@ for line in lines:
             # Line after last element has lots of spaces
             # tabula makes this into empty strings in the middle 
             # of a row. test for empty by joining them up 
-            # and checking len
-            if  len("".join(element_line[2:7])) == 0:
+            # and checking if the result is empty
+            if  "".join(element_line[2:7]) == "":
                 skater["base score"] = float(element_line[0].replace(",","."))
                 skater["elements"] = elements
                 elements = {}
                 break
             element = parse_element(element_line)
             elements.append(element)
+    if "COMPONENTS" in words[0]:
+        components = {}
+        line = next(lines)
+        component_line = next( csv.reader([line]) )
+        # Extra ugly hack to handle "Skating skills", don't want to do better atm
+        component, factor = component_line[0][:-4], component_line[0][-4:] 
+        components[component] = {
+            "scores": [float(score.replace(",",".")) for score in component_line[1:-1] if score != "" ],
+            "factor": float(factor.replace(",",".")) }
 
+        for line in lines:
+            component_line = next( csv.reader([line]) )
+            if "".join(component_line[2:7]) == "":
+                skater["components"] =  components
+                components = {}
+                break
+            component, factor = component_line[0].split()
+            components[component] = {
+                "scores": [float(score.replace(",",".")) for score in component_line[1:-1] if score != "" ],
+                "factor": float(factor.replace(",",".")) }
+    if "DEDUCTIONS" in words[0]:
+        deductions = []
+        for line in lines:
+            words = line.split(",")
+            if "JUDGES" in words[0]:
+                break
 
-skaters.append(skater)
+            deductions.append(words[0])
+
+        skater["deductions"] = deductions
+        skaters.append(skater)
+        skater = {}
+
+print ("Done")
