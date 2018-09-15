@@ -116,7 +116,7 @@ def tolka_TimeSchedule_resultat(filnamn):
 
     return skaters
 
-def parse_ISUCalcFS_element(line):
+def parse_ISUCalcFS_element(line,num_judges):
     element = {}
 
     tmp = list(
@@ -124,7 +124,7 @@ def parse_ISUCalcFS_element(line):
                 lambda itm: len(itm), line))
     element["order"],tmp = int(tmp[0]),tmp[1:]
     element["total"],tmp = float(tmp[-1][:-1]),tmp[:-1]
-    tmp,element["judges"]= tmp[:-judges],tmp[-judges:]
+    tmp,element["judges"]= tmp[:-num_judges],tmp[-num_judges:]
     try:
         element["judges"] = list(map(int,element["judges"]))
     except ValueError:
@@ -152,7 +152,7 @@ def parse_ISUCalcFS_deductions(line):
         deduction["count"] = int(type_total[1].split(")")[0])
         deductions.append(deduction)
 
-def tolka_ISUCalcFs_resultat(filnamn):
+def tolka_ISUCalcFs_resultat(filnamn,num_judges):
 
     with open(filnamn,"r") as fil:
         lines = fil.readlines()
@@ -199,7 +199,7 @@ def tolka_ISUCalcFs_resultat(filnamn):
                     skater["elements"] = elements
                     elements = {}
                     break
-                element = parse_ISUCalcFS_element(element_line)
+                element = parse_ISUCalcFS_element(element_line,num_judges)
                 elements.append(element)
                 
         if "COMPONENTS" in words[0]:
