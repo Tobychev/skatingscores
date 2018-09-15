@@ -1,6 +1,8 @@
 import pandas as pd
 import csv
 
+
+
 def parse_TimeSchedule_element(line):
     element = {}
     trick_section = line[0].split()
@@ -114,73 +116,41 @@ def tolka_TimeSchedule_resultat(filnamn):
 
     return skaters
 
-
 def parse_ISUCalcFS_element(line):
     element = {}
-    
-    element["order"] = int(line[0])
-    line = line[1:]
-    print(line)
-    
-    trick = []
-    for ch in line[0]:
+
+    tmp = list(
+            filter(
+                lambda itm: len(itm), line))
+    element["order"],tmp = int(tmp[0]),tmp[1:]
+    element["total"],tmp = float(tmp[-1][:-1]),tmp[:-1]
+    tmp,element["judges"]= tmp[:-judges],tmp[-judges:]
+    try:
+        element["judges"] = list(map(int,element["judges"]))
+    except ValueError:
         pass
-        #if  ch 
+    tmp = " ".join(tmp)
+    tmp,element["goe"] = tmp[:-5].strip(),float(tmp[-5:])
+    if tmp[-1] == "x":
+        element["late"] = True
+        tmp = tmp[:-1].strip()
+    else:
+        element["late"] = False
+    element["executed"],element["base"] = tmp[:-4].strip(),float(tmp[-4:])
 
-    if False:
-        
-        xpos = 2
-        jpos = 3
-        trick_section = line[1].split()
-        print(trick_section, len(trick_section))
-        element["order"] = int(line[0])
-        element["trick"] = trick_section[0]
-        if len(trick_section) == 1:
-            element["base"] = float(line[2])
-        elif len(trick_section) == 2:
-            if "<" in line[1]: 
-                element["base"] = float(line[2].replace(",","."))
-                xpos = 3
-                jpos = 4
-            elif "*" in line[1]:
-                element["base"] = float(line[2].replace(",","."))
-                xpos = 3
-                jpos = 4
-            elif "e" in line[1]:
-                element["base"] = float(line[2].replace(",","."))
-                xpos = 3
-                jpos = 4
-            elif "!" in line[1]:
-                element["base"] = float(line[2].replace(",","."))
-            else:
-                element["base"] = float(trick_section[1].replace(",","."))
-
-        elif len(trick_section) == 3:
-            element["base"] = float(trick_section[2].replace(",","."))
-            #if "<" in trick_section[1]:
-            #    element["base"]  = float(trick_section[2].replace(",","."))
-            #elif trick_section[2] == "e" :
-            #    element["trick"] += trick_section[2] 
-            #    element["base"]  = float(trick_section[4].replace(",","."))
-            #else:
-        
-    #    if trick_section[1] == "!":
-    #        element["trick"] +="!"
-        
-        if "x" in line[xpos]:
-            element["late"] =True
-            element["GOE"] = line[2].split()[-1] 
-            element["GOE"] = float(element["GOE"].replace(",","."))
-        else:
-            element["GOE"] = float(line[2].replace(",","."))
-
-        if element["base"] > 0:        
-            for judge,score in enumerate(line[jpos:-1]):
-                if score == "":
-                    break
-                element["J"+str(judge+1)] = int(score)
-        element["score"] = float(line[-1].replace(",","."))
     return element
+
+def parse_ISUCalcFS_deductions(line):
+    # First is just "Deductions", last is total we already have
+    words = iter(line.split(",")[1:-1])
+    deductions = []
+    
+    for itm in words:
+        deduction = {"type":itm[:-1]}
+        type_total = next(words).split("(")
+        deduction["subtotal"] = float(type_total[0])
+        deduction["count"] = int(type_total[1].split(")")[0])
+        deductions.append(deduction)
 
 def tolka_ISUCalcFs_resultat(filnamn):
 
@@ -200,6 +170,12 @@ def tolka_ISUCalcFs_resultat(filnamn):
             line = csv.reader( [next(lines)] ) 
             line = list(line)
             skater["placed"],skater["name"],skater["nation"],skater["startpos"],skater["TSS"],skater["TES"],skater["PCS"],skater["deductions"] = line[0]
+            skater["placed"] = int(skater["placed"])
+            skater["startpos"] = int(skater["startpos"])
+            skater["deductions"] = float(skater["deductions"])
+            skater["TSS"] = float(skater["TSS"])
+            skater["TES"] = float(skater["TES"])
+            skater["PCS"] = float(skater["PCS"])
             continue
         if "CATEGORY" in words[0]:
             skater["category"] = words[0].split(":")[-1].strip()
@@ -225,6 +201,7 @@ def tolka_ISUCalcFs_resultat(filnamn):
                     break
                 element = parse_ISUCalcFS_element(element_line)
                 elements.append(element)
+                
         if "COMPONENTS" in words[0]:
             components = {}
             line = next(lines)
@@ -245,21 +222,13 @@ def tolka_ISUCalcFs_resultat(filnamn):
                 components[component] = {
                     "scores": [float(score.replace(",",".")) for score in component_line[1:-1] if score != "" ],
                     "factor": float(factor.replace(",",".")) }
-        if "DEDUCTIONS" in words[0]:
-            deductions = []
-            for line in lines:
-                words = line.split(",")
-                if "JUDGES" in words[0]:
-                    break
-
-                deductions.append(words[0])
-
-            skater["deductions"] = deductions
+        #print(words)
+        if "Deductions" in words[0]:            
+            skater["deductions"] = parse_ISUCalcFS_deductions(line)
             skaters.append(skater)
             skater = {}
-
+       
     return skaters
-
 
 if __name__ == "__main__":
 
