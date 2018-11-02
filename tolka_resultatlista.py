@@ -1,10 +1,9 @@
 import pandas as pd
 import csv
 
-
-
 def parse_TimeSchedule_element(line):
     element = {}
+
     trick_section = line[0].split()
     element["order"] = int(trick_section[0])
     element["trick"] = trick_section[1]
@@ -21,9 +20,14 @@ def parse_TimeSchedule_element(line):
     if trick_section[2] == "!":
         element["trick"] +="!"
 
-    element["GOE"] = float(line[1].replace(",","."))
+    if len(line) == 8:
+        line = line[1:]
+    elif len(line) == 9:
+        line = line[2:]
+
+    element["GOE"] = float(line[0].replace(",","."))
     if element["base"] > 0:
-        for judge,score in enumerate(line[2:-2]):
+        for judge,score in enumerate(line[1:-2]):
             element["J"+str(judge+1)] = int(score)
     element["score"] = float(line[-1].replace(",","."))
     return element
@@ -41,7 +45,6 @@ def tolka_TimeSchedule_resultat(filnamn):
 
     for line in lines:
         words = line.split(",")
-
         if "COMPETITION" in words[0]:
             skater["competition"] = words[0].split(":")[-1].lower().strip()
             continue
@@ -59,10 +62,17 @@ def tolka_TimeSchedule_resultat(filnamn):
             words = next(lines).split(",")
             skater["club"] = words[0].strip()
 
-            words = next(lines).split(",")
-            skater["total"] = float( ".".join(words[3:5]).split('"')[1] )
-            skater["element score"] = float( ".".join(words[6:8]).split('"')[1] )
-            skater["pc score"] = float( ".".join(words[8:10]).split('"')[1] )
+            words = next(lines).split(",") 
+            # Handle variations in how
+            # tabula splits whitespace
+            if len(words) == 11:
+                words = words[3:]
+            elif len(words) == 12:
+                words = words[4:]
+
+            skater["total"] = float( ".".join(words[0:2]).split('"')[1] )
+            skater["element score"] = float( ".".join(words[3:5]).split('"')[1] )
+            skater["pc score"] = float( ".".join(words[5:7]).split('"')[1] )
 
             continue
         if "EXECUTED" in words[0]:
