@@ -70,9 +70,9 @@ def tolka_TimeSchedule_resultat(filnamn):
             elif len(words) == 12:
                 words = words[4:]
 
-            skater["total"] = float( ".".join(words[0:2]).split('"')[1] )
-            skater["element score"] = float( ".".join(words[3:5]).split('"')[1] )
-            skater["pc score"] = float( ".".join(words[5:7]).split('"')[1] )
+            skater["TSS"] = float( ".".join(words[0:2]).split('"')[1] )
+            skater["TES"] = float( ".".join(words[3:5]).split('"')[1] )
+            skater["PCS"] = float( ".".join(words[5:7]).split('"')[1] )
 
             continue
         if "EXECUTED" in words[0]:
@@ -149,7 +149,7 @@ def parse_ISUCalcFS_element(line,num_judges):
         element["executed"] = tmp[0]
         tmp = tmp[1:]
 
-    element["base"],element["goe"],tmp = float(tmp[0]),float(tmp[1]),tmp[2:]
+    element["base"],element["GOE"],tmp = float(tmp[0]),float(tmp[1]),tmp[2:]
     element["judges"]= " ".join(tmp).split()
 
     try:
@@ -175,6 +175,26 @@ def parse_ISUCalcFS_deductions(line):
 
         deductions.append(deduction)
 
+def parse_ISUCalcFS_component(line,component):
+    component = {"factor":0,"scores":0}
+    tmp = list(
+        filter(
+            lambda itm: len(itm), line))
+    tmp = tmp[2:]
+    tmp[-1] = tmp[-1][:-1]
+
+    # remove any extra spaces
+    # floating about
+    tmp = " ".join(tmp).split()
+    try:
+        tmp = list(map(float,tmp))
+    except ValueError:
+        pass
+
+    component["factor"],component["scores"] = tmp[0],tmp[1:]
+
+    return component
+
 def tolka_ISUCalcFs_resultat(filnamn,num_judges):
 
     with open(filnamn,"r") as fil:
@@ -183,6 +203,7 @@ def tolka_ISUCalcFs_resultat(filnamn,num_judges):
     skaters = []
     skater  = {}
     elements = {}
+    components = {}
 
     lines = iter(lines)
 
@@ -228,33 +249,25 @@ def tolka_ISUCalcFs_resultat(filnamn,num_judges):
                     break
                 element = parse_ISUCalcFS_element(element_line,num_judges)
                 elements.append(element)
-                
-        if "COMPONENTS" in words[0]:
-            components = {}
-            line = next(lines)
-            component_line = next( csv.reader([line]) )
-            # Extra ugly hack to handle "Skating skills", don't want to do better atm
-            component, factor = component_line[0][:-4], component_line[0][-4:] 
-            components[component] = {
-                "scores": [float(score.replace(",",".")) for score in component_line[1:-1] if score != "" ],
-                "factor": float(factor.replace(",",".")) }
 
-            for line in lines:
-                component_line = next( csv.reader([line]) )
-                if "".join(component_line[2:7]) == "":
-                    skater["components"] =  components
-                    components = {}
-                    break
-                component, factor = component_line[0].split()
-                components[component] = {
-                    "scores": [float(score.replace(",",".")) for score in component_line[1:-1] if score != "" ],
-                    "factor": float(factor.replace(",",".")) }
-        #print(words)
+        if "Skating Skills" in words:
+            components["Skating Skills"] = parse_ISUCalcFS_component(words,"Skating Skills")
+        if "Transitions" in words:
+            components["Transitions"] = parse_ISUCalcFS_component(words,"Transitions")
+        if "Performance" in words:
+            components["Performance"] = parse_ISUCalcFS_component(words,"Performance")
+        if "Composition" in words:
+            components["Composition"] = parse_ISUCalcFS_component(words,"Composition")
+        if "Interpretation" in line:
+            components["Interpretation"] = parse_ISUCalcFS_component(words,"Interpretation")
+
         if "Deductions" in words[0]:            
             skater["deductions"] = parse_ISUCalcFS_deductions(line)
+            skater["components"] = components
             skaters.append(skater)
             skater = {}
-       
+            components = {}
+
     return skaters
 
 if __name__ == "__main__":
