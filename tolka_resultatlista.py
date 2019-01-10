@@ -270,6 +270,61 @@ def tolka_ISUCalcFs_resultat(filnamn,num_judges):
 
     return skaters
 
+def get_trick_category(trick):
+    if "A" in trick:
+        return "axel"
+    if "T" in trick:
+        return "toeloop"
+    if "F" in trick:
+        return "flip"
+    if "Lz" in trick:
+        return "lutz"
+    if "Lo" in trick:
+        return "loop"
+    if "FS" in trick:
+        return "flyspin"
+    if "FC" in trick:
+        return "flycamelspin"
+    if "CC" in trick:
+        return "combospin"
+    if "CS" in trick:
+        return "camelspin"
+    if "LSp" in trick:
+        return "skyspin"
+    if "SSp" in trick:
+        return "sitspin"
+    if "St" in trick:
+        return "stepseq"
+
+def scatterplots(data,xaxis,yaxis,bygroup,cols=3):
+    """
+    scatterplots(data,xaxis,yaxis,bygroup,cols=3)
+
+    Takes as dataframe `data' with numerical columns
+    `xaxis', `yaxis' and categorical column `bygroup'
+    and then makes a set of scatterplots of
+    xaxis vs yaxis for each category in the
+    catogorical column bygroup
+    """
+    groups = data[bygroup].unique()
+    n_groups = len(groups)
+
+    rows = int(np.ceil(n_groups/cols))
+    fig,ax = pl.subplots(nrows=rows, ncols=cols,figsize=(10, 12))
+    idx = 0
+    for row in range(0,rows):
+        for col in range(0,cols):
+            if row*cols+col >= n_groups:
+                ax[row,col].remove()
+            else:
+                ax[row,col].scatter(
+                    data.loc[data[bygroup] == groups[idx],xaxis],
+                    data.loc[data[bygroup] == groups[idx],yaxis],
+                )
+                ax[row,col].set_title(groups[idx])
+            idx+=1
+    return fig
+
 if __name__ == "__main__":
 
 #    skaters = tolka_ISUCalcFs_resultat("tabula-SkateMalmo2018-korta.csv")
